@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Gears
+Comment=Gears
+Exec=sh gears.sh
+Icon=icon
+Terminal=true
+Categories=games;
