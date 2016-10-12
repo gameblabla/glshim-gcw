@@ -1,7 +1,11 @@
+#include <GL/gl.h>
+
 #include "glx.h"
+#include "../gl/loader.h"
+#include "../gl/wrap/extra.h"
 
 #define MAP(func_name, func) \
-    if (strcmp(name, func_name) == 0) return (void *)func;
+    if (strcmp((char *)name, func_name) == 0) return (void *)func;
 
 #define MAP_EGL(func_name, egl_func) \
     MAP(#func_name, eglGetProcAddress(#egl_func))
@@ -11,16 +15,20 @@
 #define ARB(func_name) MAP(#func_name "ARB", func_name)
 
 #define STUB(func_name)                       \
-    if (strcmp(name, #func_name) == 0) {      \
+    if (strcmp((char *)name, #func_name) == 0) {      \
         printf("glX stub: %s\n", #func_name); \
         return (void *)glXStub;               \
     }
 
-void glXStub(void *x, ...) {
-    return;
+void glXStub() {
+    static int first = 1;
+    if (first) {
+        first = false;
+        fprintf(stderr, "warning: invoking glX stub\n");
+    }
 }
 
-void *glXGetProcAddressARB(const char *name) {
+void *glXGetProcAddressARB(const GLubyte *name) {
     // generated gles wrappers
 #ifdef USE_ES2
     #include "gles2funcs.inc"
@@ -29,19 +37,30 @@ void *glXGetProcAddressARB(const char *name) {
 #endif
 
     // glX calls
+    EX(glXChooseFBConfig);
     EX(glXChooseVisual);
     EX(glXCopyContext);
     EX(glXCreateContext);
+    EX(glXCreateContextAttribsARB);
     EX(glXCreateGLXPixmap);
+    EX(glXCreateWindow);
     EX(glXDestroyContext);
     EX(glXDestroyGLXPixmap);
+    EX(glXDestroyWindow);
+    EX(glXGetClientString);
     EX(glXGetConfig);
+    EX(glXGetCurrentContext);
     EX(glXGetCurrentDisplay);
     EX(glXGetCurrentDrawable);
+    EX(glXGetFBConfigAttrib);
+    EX(glXGetFBConfigs);
+    EX(glXGetVisualFromFBConfig);
     EX(glXIsDirect);
     EX(glXMakeCurrent);
+    EX(glXQueryExtension);
     EX(glXQueryExtensionsString);
     EX(glXQueryServerString);
+    EX(glXQueryVersion);
     EX(glXSwapBuffers);
     EX(glXSwapIntervalEXT);
     EX(glXSwapIntervalMESA);
@@ -109,7 +128,15 @@ void *glXGetProcAddressARB(const char *name) {
     EX(glTexCoord3##suffix##v);       \
     EX(glTexCoord3##suffix);          \
     EX(glTexCoord4##suffix##v);       \
-    EX(glTexCoord4##suffix);
+    EX(glTexCoord4##suffix);          \
+    EX(glMultiTexCoord1##suffix##v);  \
+    EX(glMultiTexCoord1##suffix);     \
+    EX(glMultiTexCoord2##suffix##v);  \
+    EX(glMultiTexCoord2##suffix);     \
+    EX(glMultiTexCoord3##suffix##v);  \
+    EX(glMultiTexCoord3##suffix);     \
+    EX(glMultiTexCoord4##suffix##v);  \
+    EX(glMultiTexCoord4##suffix);
 
     THUNK(b, GLbyte);
     THUNK(d, GLdouble);
@@ -199,6 +226,13 @@ void *glXGetProcAddressARB(const char *name) {
     EX(glMapGrid2f);
     EX(glMateriali);
     EX(glMultiTexCoord2f);
+    EX(glMultiTexCoord2fARB);
+    EX(glMultiTexCoord2fv);
+    EX(glMultiTexCoord2fvARB);
+    EX(glMultiTexCoord4f);
+    EX(glMultiTexCoord4fARB);
+    EX(glMultiTexCoord4fv);
+    EX(glMultiTexCoord4fvARB);
     EX(glMultMatrixd);
     EX(glNewList);
     EX(glOrtho);
@@ -244,7 +278,6 @@ void *glXGetProcAddressARB(const char *name) {
     STUB(glFeedbackBuffer);
     STUB(glGetClipPlane);
     STUB(glGetLightiv);
-    STUB(glGetMaterialiv);
     STUB(glGetPixelMapfv);
     STUB(glGetPixelMapuiv);
     STUB(glGetPixelMapusv);
@@ -253,7 +286,6 @@ void *glXGetProcAddressARB(const char *name) {
     STUB(glGetTexGendv);
     STUB(glGetTexGenfv);
     STUB(glGetTexGeniv);
-    STUB(glMaterialiv);
     STUB(glPassThrough);
     STUB(glPixelMapfv);
     STUB(glPixelMapuiv);
@@ -261,12 +293,11 @@ void *glXGetProcAddressARB(const char *name) {
     STUB(glPixelStoref);
     STUB(glPrioritizeTextures);
     STUB(glSelectBuffer);
-    STUB(glTexSubImage1D);
 
     printf("glXGetProcAddress: %s not found.\n", name);
-    return NULL;
+    return glXStub;
 }
 
-void *glXGetProcAddress(const char *name) {
+void *glXGetProcAddress(const GLubyte *name) {
     return glXGetProcAddressARB(name);
 }

@@ -2,7 +2,7 @@ CC = mipsel-linux-gcc
 
 CFLAGS = -O0 -g -I./WRAPPER
 LDFLAGS =  -lSDL -lGL -ldl -lEGL -lm -lpreload
-OUTPUT = example
+OUTPUT = gears
 
 SOURCES = gears.c
 OBJS = ${SOURCES:.c=.o}

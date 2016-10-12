@@ -3,7 +3,8 @@
 import argparse
 import jinja2
 import re
-from yaml import load
+import sys
+import yaml
 
 split_re = re.compile(r'^(?P<type>.*?)\s*(?P<name>\w+)$')
 env = jinja2.Environment(
@@ -12,35 +13,73 @@ env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('template'),
 )
 
-def args(args, add_type=True):
+def args(args, add_type=True, prefix=''):
     return ', '.join(
-        '{} {}'.format(arg['type'], arg['name']) if add_type else arg['name']
+        '{} {}{}'.format(arg['type'], prefix, arg['name']) if add_type else prefix + arg['name']
         for arg in args
     )
 
-f = '0.2f'
 printf_lookup = {
-    'GLbitfield': 'd',
-    'GLboolean': 'd',
-    'GLbyte': 'c',
-    'GLubyte': 'c',
-    'GLchar': 'c',
-    'GLdouble': '0.2f',
-    'GLenum': 'u',
-    'GLfloat': '0.2f',
-    'GLint': 'd',
-    'GLintptr': 'd',
-    'GLintptrARB': 'd',
-    'GLshort': 'd',
-    'GLsizei': 'd',
-    'GLsizeiptr': 'd',
-    'GLsizeiptrARB': 'd',
-    'GLuint': 'u',
-    'GLushort': 'u',
-    'GLvoid': 'p',
+    'GLbitfield':    'd',
+    'GLboolean':     'd',
+    'GLbyte':        'c',
+    'GLchar':        'c',
+    'GLclampd':      '0.2f',
+    'GLclampf':      '0.2f',
+    'GLclampx':      'd',
+    'GLdouble':      '0.2f',
+    'GLenum':        '0x%04X',
+    'GLfixed':       'd',
+    'GLfloat':       '0.2f',
+    'GLhalfNV':      'd',
+    'GLint':         'd',
+    'GLint64EXT':    '"PRIi64"',
+    'GLintptr':      'td',
+    'GLintptrARB':   'td',
+    'GLhandleARB':   'u',
+    'GLshort':       'd',
+    'GLsizei':       'd',
+    'GLsizeiptr':    'td',
+    'GLsizeiptrARB': 'td',
+    'GLubyte':       'c',
+    'GLuint':        'u',
+    'GLuint64':      '"PRIu64"',
+    'GLuint64EXT':   '"PRIu64"',
+    'GLushort':      'u',
+    'GLvoid':        'p',
+    'GLvdpauSurfaceNV': 'td',
+
+    'bool':      'd',
+    'double':    'lf',
+    'float':     'f',
+    'int':       'd',
+    'long long': 'll',
+    'long':      'l',
+    'unsigned int':       'u',
+    'unsigned long long': 'llu',
+    'unsigned long':      'lu',
+
+    'int8_t':   '"PRIi8"',
+    'int16_t':  '"PRIi16"',
+    'int32_t':  '"PRIi32"',
+    'int64_t':  '"PRIi64"',
+    'uint8_t':  '"PRIu8"',
+    'uint16_t': '"PRIu16"',
+    'uint32_t': '"PRIu32"',
+    'uint64_t': '"PRIu64"',
+
+    'Bool': 'd',
+    'Colormap': 'lu',
+    'Font': 'lu',
+    'GLXDrawable': 'd',
+    'Pixmap': 'lu',
+    'Window': 'lu',
 }
 
 def printf(args):
+    if isinstance(args, dict):
+        args = (args,)
+
     types = []
     for arg in args:
         typ = arg['type']
@@ -48,10 +87,11 @@ def printf(args):
             t = 'p'
         else:
             t = printf_lookup.get(typ, 'p')
-
+        if not '%' in t:
+            t = '%' + t
         types.append(t)
 
-    return ', '.join('%' + t for t in types)
+    return ', '.join(types)
 
 def unconst(s):
     split = s.split(' ')
@@ -71,7 +111,7 @@ def split_arg(arg):
         return {'type': 'unknown', 'name': arg}
 
 def gen(files, template, guard_name, headers,
-        deep=False, cats=(), ifdef=None, ifndef=None):
+        deep=False, cats=(), ifdef=None, ifndef=None, skip=None):
     funcs = {}
     formats = []
     unique_formats = set()
@@ -83,6 +123,8 @@ def gen(files, template, guard_name, headers,
                     functions.extend(f.items())
         else:
             functions = data.items()
+
+        functions = [f for f in functions if not skip or not f[0] in skip]
 
         for name, args in sorted(functions):
             props = {}
@@ -141,15 +183,21 @@ if __name__ == '__main__':
     parser.add_argument('--cats', help='deep category filter')
     parser.add_argument('--ifdef', help='wrap with ifdef')
     parser.add_argument('--ifndef', help='wrap with ifndef')
+    parser.add_argument('--skip', help='skip function from yml')
 
     args = parser.parse_args()
 
     files = []
     for name in args.yaml.split(','):
         with open(name) as f:
-            data = load(f)
+            data = yaml.load(f)
             if data:
                 files.append(data)
+
+    skip = None
+    if args.skip:
+        with open(args.skip) as f:
+            skip = yaml.load(f)
 
     if args.cats:
         cats = args.cats.split(',')
@@ -157,4 +205,4 @@ if __name__ == '__main__':
         cats = None
     print gen(files, args.template, args.name,
               args.headers, args.deep, cats,
-              args.ifdef, args.ifndef)
+              args.ifdef, args.ifndef, skip=skip)

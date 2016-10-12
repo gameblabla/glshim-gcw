@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 
 #include <SDL/SDL.h>
 #include <X11/Xlib.h>
