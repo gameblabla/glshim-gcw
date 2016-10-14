@@ -1,5 +1,5 @@
-#include <stdarg.h>
 #include "loader.h"
+#include <linux/limits.h>
 
 void *gles = NULL, *egl = NULL, *bcm_host = NULL, *vcos = NULL;
 
@@ -68,9 +68,9 @@ void *open_lib(const char **names, const char *override) {
 }
 
 void load_libs() {
-    static int first = true;
+    static int first = 1;
     if (! first) return;
-    first = false;
+    first = 0;
     char *gles_override = getenv("LIBGL_GLES");
     // optimistically try to load the raspberry pi libs
     if (! gles_override) {
@@ -85,21 +85,4 @@ void load_libs() {
     char *egl_override = getenv("LIBGL_EGL");
     egl = open_lib(egl_lib, egl_override);
     WARN_NULL(egl);
-}
-
-void debugf(char *fmt, ...) {
-    static int debug = -1;
-    if (debug < 0) {
-        debug = 0;
-        char *tmp = getenv("LIBGL_DEBUG");
-        if (tmp && strcmp(tmp, "1") == 0) {
-            debug = 1;
-        }
-    }
-    if (debug == 1) {
-        va_list arg;
-        va_start(arg, fmt);
-        vprintf(fmt, arg);
-        va_end(arg);
-    }
 }

@@ -1,7 +1,10 @@
+#include "gl.h"
+#include "state.h"
+
 #ifndef GL_STACK_H
 #define GL_STACK_H
 
-#include "types.h"
+#define STACK_SIZE 16
 
 typedef struct {
     GLbitfield mask;
@@ -14,7 +17,7 @@ typedef struct {
     GLboolean blend;
     GLint blend_src_func;
     GLint blend_dst_func;
-
+	
     GLboolean dither;
 
     GLboolean color_logic_op;
@@ -26,12 +29,16 @@ typedef struct {
     // GL_CURRENT_BIT
     GLfloat color[4];
     GLfloat normal[4];
-    GLfloat tex[MAX_TEX][4];
+    GLfloat tex[4];
+    GLfloat secondary[4];
 
     // TODO: can only fill this via raster.c
     GLfloat raster_pos[3];
     GLboolean raster_valid;
-
+	GLfloat pixel_scale_bias[4+4];
+	GLfloat pixel_zoomx;
+	GLfloat pixel_zoomy;
+	
     // GL_DEPTH_BUFFER_BIT
     GLboolean depth_test;
     GLint depth_func;
@@ -43,6 +50,14 @@ typedef struct {
     GLboolean normalize;
     GLboolean polygon_offset_fill;
     GLboolean stencil_test;
+    GLboolean texture_1d[MAX_TEX];
+    GLboolean texture_2d[MAX_TEX];
+    GLboolean texture_3d[MAX_TEX];
+    GLboolean texgen_s[MAX_TEX];
+    GLboolean texgen_r[MAX_TEX];
+    GLboolean texgen_t[MAX_TEX];
+    GLboolean colormaterial;
+    GLboolean autonormal;
 
     // GL_FOG_BIT
     GLboolean fog;
@@ -92,29 +107,36 @@ typedef struct {
     GLboolean scissor_test;
     GLfloat scissor_box[4];
 
-    // TODO: GL_STENCIL_BUFFER_BIT
+    // GL_STENCIL_BUFFER_BIT
+    GLenum stencil_func;
+    GLint  stencil_ref;
+    GLuint stencil_mask;
+    GLint  stencil_clearvalue;
+    GLenum stencil_sfail;
+    GLenum stencil_dpfail;
+    GLenum stencil_dppass;
 
     // GL_TEXTURE_BIT
-    struct {
-        GLint bind;
-        GLboolean enable_2d;
-        GLint min_filter, mag_filter;
-        GLint wrap_s, wrap_t;
-        struct {
-            GLboolean s, t, r, q;
-            texgen_state_t state;
-        } texgen;
-    } texture[MAX_TEX];
-    GLint active_texture;
+    GLint texture[MAX_TEX];
+    texgen_state_t texgen[MAX_TEX];
+    GLint active;
 
-    // TODO: GL_TRANSFORM_BIT (incomplete)
-    GLint matrix_mode;
-
-    // TODO: GL_VIEWPORT_BIT
-
+    // GL_TRANSFORM_BIT
+	// with Clip Planes...
+	GLenum matrix_mode;
+	GLboolean normalize_flag;
+	GLboolean rescale_normal_flag;
+    // GL_VIEWPORT_BIT
+	GLint	viewport_size[4];
+	GLfloat depth_range[2];
+	
     // dynamically-sized shenanigans
     GLboolean *clip_planes_enabled;
     GLfloat *clip_planes;
+
+    // misc
+    unsigned int len;
+    unsigned int cap;
 } glstack_t;
 
 typedef struct {
@@ -123,21 +145,28 @@ typedef struct {
     // GL_CLIENT_PIXEL_STORE_BIT
     GLint pack_align;
     GLint unpack_align;
-    GLint unpack_row_length;
-    GLint unpack_skip_pixels;
-    GLint unpack_skip_rows;
+    GLuint unpack_row_length;
+    GLuint unpack_skip_pixels;
+    GLuint unpack_skip_rows;
+    GLuint pack_row_length;
+    GLuint pack_skip_pixels;
+    GLuint pack_skip_rows;
 
     // GL_CLIENT_VERTEX_ARRAY_BIT
+	GLuint client;
     GLboolean vert_enable;
     GLboolean color_enable;
     GLboolean tex_enable[MAX_TEX];
     GLboolean normal_enable;
+    GLboolean secondary_enable;
     pointer_states_t pointers;
+    unsigned int len;
+    unsigned int cap;
 } glclientstack_t;
 
-void glPushClientAttrib(GLbitfield mask);
-void glPopClientAttrib();
-void glPushAttrib(GLbitfield mask);
-void glPopAttrib();
+void glshim_glPushClientAttrib(GLbitfield mask);
+void glshim_glPopClientAttrib();
+void glshim_glPushAttrib(GLbitfield mask);
+void glshim_glPopAttrib();
 
 #endif

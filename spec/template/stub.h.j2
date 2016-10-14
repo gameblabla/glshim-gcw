@@ -1,8 +1,0 @@
-{% extends "base/header.j2" %}
-{% block content %}
-
-{% for func in functions %}
-{{ func.return }} stub_{{ func.name }}({{ func.name }}_ARG_EXPAND);
-{% endfor %}
-
-{% endblock %}

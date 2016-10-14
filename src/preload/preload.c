@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <GL/glx.h>
 
+# define RTLD_NEXT	((void *) -1l)
+
 /*
 typedef int (*SDLINITPTR)(uint32_t flags);
 int SDL_Init(uint32_t flags) {

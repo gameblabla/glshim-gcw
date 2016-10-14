@@ -7,23 +7,20 @@
 #include <string.h>
 
 #include "const.h"
-#include "wrap/glpack.h"
-#include "wrap/stub.h"
 
 // will become references to dlopen'd gles and egl
 extern void *gles, *egl, *bcm_host, *vcos;
 
 extern void *open_lib(const char **names, const char *override);
 extern void load_libs();
-extern void debugf(char *fmt, ...);
 
 #ifndef WARN_NULL
 #define WARN_NULL(name) if (name == NULL) printf("libGL: warning, " #name " is NULL\n");
 #endif
 
 #ifndef LOAD_RAW
+#define DEFINE_RAW(lib, name) static name##_PTR lib##_##name
 #define LOAD_RAW(lib, name, ...) \
-    static name##_PTR lib##_##name; \
     { \
         static bool first = true; \
         if (first) { \
@@ -34,60 +31,25 @@ extern void debugf(char *fmt, ...);
             if (lib != NULL) { \
                 lib##_##name = (name##_PTR)__VA_ARGS__; \
             } \
+            WARN_NULL(lib##_##name); \
         } \
     }
 #endif
 
-#define LOAD_LIB(lib, name) LOAD_RAW(lib, name, dlsym(lib, #name))
+#define LOAD_LIB(lib, name) DEFINE_RAW(lib, name); LOAD_RAW(lib, name, dlsym(lib, #name))
 
 #ifndef LOAD_GLES
 #define LOAD_GLES(name) \
-    LOAD_GLES_SILENT(name); \
-    WARN_NULL(gles_##name); \
-    if (gles_##name == NULL) gles_##name = stub_##name;
+    LOAD_LIB(gles, name)
+    
 #endif
 
-#define LOAD_GLES_SILENT(name) LOAD_LIB(gles, name)
 #define LOAD_EGL(name) LOAD_LIB(egl, name)
-#define LOAD_OES(name) \
-    LOAD_EGL(eglGetProcAddress); \
-    LOAD_RAW(egl, name, egl_eglGetProcAddress(#name));
-
-#ifndef PUSH_IF_COMPILING
-#define PUSH_IF_COMPILING(name) \
-    FORWARD_IF_REMOTE(name); \
-    if (state.list.active) { \
-        glPushCall(pack_##name(NULL name##_ARG_NAMES_TAIL)); \
-        return (name##_RETURN)0; \
+#define LOAD_GLES_OES(name) \
+    DEFINE_RAW(gles, name); \
+    { \
+        LOAD_EGL(eglGetProcAddress); \
+        LOAD_RAW(gles, name, egl_eglGetProcAddress(#name"OES")); \
     }
-#endif
-
-#ifndef FORWARD_IF_REMOTE_EXT
-#define FORWARD_IF_REMOTE_EXT(name, ...)        \
-    do {                                        \
-        if (state.remote) {                     \
-            return forward_##name(__VA_ARGS__); \
-        }                                       \
-    } while (0)
-#endif
-
-#ifndef FORWARD_IF_REMOTE
-#define FORWARD_IF_REMOTE(name) FORWARD_IF_REMOTE_EXT(name, name##_ARG_NAMES)
-#endif
-
-#ifndef PROXY
-#define PROXY(load_name, lib, name) \
-    LOAD_##load_name(name); \
-    if (lib##_##name != NULL) { \
-        return lib##_##name(name##_ARG_NAMES); \
-    }
-#endif
-
-#define PROXY_GL(name) PROXY(GLES_SILENT, gles, name)
-#ifndef PROXY_GLES
-#define PROXY_GLES(name) PROXY(GLES_SILENT, gles, name)
-#endif
-#define PROXY_EGL(name) PROXY(EGL, egl, name)
-#define PROXY_OES(name) PROXY(OES, egl, name)
 
 #endif

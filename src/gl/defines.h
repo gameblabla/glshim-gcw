@@ -1,12 +1,4 @@
-#include <GL/gl.h>
-
-#ifndef MIN
-#define MIN(a, b) (((a) < (b) ? (a) : (b)))
-#endif
-
-#ifndef MAX
-#define MAX(a, b) (((a) > (b) ? (a) : (b)))
-#endif
+//#include <GL/gl.h>
 
 // newly-defined GL functions
 GLboolean glIsList(GLuint list);
@@ -36,6 +28,7 @@ void glUnlockArraysEXT();
 void glVertex2f(GLfloat x, GLfloat y);
 void glVertex2i(GLint x, GLint y);
 void glVertex3f(GLfloat x, GLfloat y, GLfloat z);
+GLenum glGetError();
 
 // custom functions
 void glPushCall(void *call);
